@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Word Translator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.4/css/bulma.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@4/public/assets/styles/choices.min.css">
+    <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/choices.js@4/public/assets/scripts/choices.min.js"></script>
+    <style type="text/css">
+        body {
+            display: flex;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+
+        main {
+            flex: 1;
+        }
+
+        .padding-bottom-xs {
+            padding-bottom: 1em !important;
+        }
+
+        .padding-vertical-small {
+            padding-top: 1em !important;
+            padding-bottom: 1em !important;
+        }
+
+        th.is-2 {
+            width: 20%;
+        }
+    </style>
+    <script type="text/javascript">
+        Object.defineProperty(String.prototype, 'isEmpty', {
+            get() {
+                return /^\s*$/.test(this);
+            }
+        });
+        Object.defineProperty(Array.prototype, 'isEmpty', {
+            get() {
+                return this.length == 0;
+            }
+        });
+        (function (global) {
+            let config = {
+                language: {
+                    default: 'en',
+                    selected: []
+                },
+                api: {
+                    key: '',
+                    url: 'https://translation.googleapis.com/language/translate/v2/'
+                }
+            };
+            function getQueryParameters() {
+                let temp = window.top.document.URL.split('?');
+                if (temp.length === 1) return {};
+                let queryString = temp[1];
+                return queryString.split('&')
+                    .map(pair => pair.split('=', 2))
+                    .reduce((obj, current) => {
+                        obj[current[0]] = current.length >= 1 ? unescape(current[1]) : null;
+                        return obj;
+                    }, {});
+            }
+            function populateConfiguration(parameters, config) {
+                if (parameters['defaultLanguage'] !== undefined)
+                    config.language.default = parameters.defaultLanguage;
+                if (parameters['apiKey'] !== undefined)
+                    config.api.key = parameters.apiKey;
+                if (parameters['selectedLanguages'] !== undefined)
+                    config.language.selected = parameters.selectedLanguages.split(',').map(code => code.trim());
+                return config;
+            }
+            function getSupportedLanguages(config) {
+                function convertToSingleObject(languages) {
+                    return languages.reduce((obj, current) => {
+                        obj[current.language] = current.name;
+                        return obj;
+                    }, {});
+                }
+                return fetch(`${config.api.url}languages?key=${config.api.key}`, {
+                    method: 'post',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        target: config.language.default
+                    })
+                })
+                    .then(response => response.json())
+                    .then(json => json.data.languages)
+                    .then(convertToSingleObject);
+            }
+            function getTranslation(apiConfig, sourceLanguageCode, targetLanguageCode, text) {
+                let { url, key } = apiConfig;
+                return fetch(`${url}?key=${key}&q=${encodeURI(text)}&source=${sourceLanguageCode}&target=${targetLanguageCode}`)
+                    .then(response => response.json())
+                    .then(json => json.data.translations[0].translatedText);
+            }
+            function populateSourceLanguage(languages, defaultLanguageCode) {
+                let languageDropdown = document.getElementById('source-language');
+                Object.keys(languages).forEach(code => {
+                    let option = document.createElement('option');
+                    option.setAttribute('value', code);
+                    option.textContent = languages[code];
+                    if (code === defaultLanguageCode)
+                        option.setAttribute('selected', 'selected');
+                    languageDropdown.appendChild(option);
+                });
+                return languageDropdown;
+            }
+            function populateTargetLanguage(languages, selected) {
+                let targetLanguageSelection = new Choices(document.getElementById('target-language'), {
+                    placeholder: true,
+                    placeholderValue: 'language'
+                });
+                targetLanguageSelection.setChoices(Object.keys(languages).map(code => ({
+                    value: code,
+                    label: languages[code],
+                    selected: selected.indexOf(code) >= 0
+                })), 'value', 'label', true);
+                return targetLanguageSelection;
+            }
+            function createTableRow() {
+                let tr = document.createElement('tr');
+                for (let index in arguments) {
+                    let td = document.createElement('td');
+                    td.textContent = arguments[index];
+                    tr.appendChild(td);
+                };
+                return tr;
+            }
+            global.document.addEventListener('DOMContentLoaded', function () {
+                let queryParameters = getQueryParameters();
+                config = populateConfiguration(queryParameters, config);
+                if (config.api.key.isEmpty) {
+                    alert('Google Translate API key is not defined');
+                    return;
+                }
+                let sourceLanguageSelection, targetLanguageSelection;
+                getSupportedLanguages(config)
+                    .then(languages => (config.language.options = languages))
+                    .then(languages => {
+                        sourceLanguageSelection = populateSourceLanguage(languages, config.language.default);
+                        targetLanguageSelection = populateTargetLanguage(languages, config.language.selected);
+                        return { sourceLanguageSelection, targetLanguageSelection };
+                    });
+                function translate() {
+                    let text = document.getElementById('text').value;
+                    if (text.isEmpty) return;
+                    let targetLanguages = targetLanguageSelection.getValue(true);
+                    if (targetLanguages.isEmpty) return;
+                    let rootContainer = document.getElementById('translated-container');
+                    let container = rootContainer.getElementsByTagName('tbody')[0];
+                    container.innerHTML = '';
+                    targetLanguages.forEach(code => {
+                        if (code === sourceLanguageSelection.value) return;
+                        getTranslation(config.api, sourceLanguageSelection.value, code, text)
+                            .then(text => {
+                                let row = createTableRow(config.language.options[code], text);
+                                container.appendChild(row);
+                            });
+                    });
+                    rootContainer.style.display = '';
+                }
+                document.getElementById('translate').addEventListener('click', translate);
+            });
+            global.config = config;
+        })(window);
+    </script>
+</head>
+
+<body>
+    <header class="section">
+        <div class="container">
+            <h1 class="title">Word Translator</h1>
+            <p class="subtitle">
+                Translate to multiple languages
+            </p>
+        </div>
+    </header>
+    <main>
+        <section class="section is-paddingless padding-bottom-xs">
+            <div class="container">
+                <div class="field has-addons">
+                    <div class="control has-icons-left">
+                        <div class="select">
+                            <select id="source-language"></select>
+                        </div>
+                        <div class="icon is-small is-left">
+                            <i class="fas fa-globe"></i>
+                        </div>
+                    </div>
+                    <div class="control is-expanded">
+                        <input class="input" type="text" id="text" placeholder="text to be translated">
+                    </div>
+                    <div class="control">
+                        <button class="button is-link" id="translate">Translate</button>
+                    </div>
+                </div>
+                <div class="field">
+                    <div class="control">
+                        <div>
+                            <select multiple size="8" id="target-language"></select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section class="section is-paddingless padding-bottom-xs">
+            <div class="container">
+                <table id="translated-container" class="table table is-striped is-fullwidth" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th class="is-2">Language</th>
+                            <th>Text</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+    <footer class="footer is-paddingless padding-vertical-small">
+        <div class="content has-text-centered">
+            <p>
+                <strong>Word Translator</strong> by <a href="https://github.com/fakhrulhilal">Fakhrulhilal Maktum</a>.
+                The source code is licensed
+                <a href="http://opensource.org/licenses/mit-license.php">MIT</a>.
+                <a href="https://bulma.io">
+                    <img src="https://bulma.io/images/made-with-bulma.png" alt="Made with Bulma" width="128"
+                        height="24">
+                </a>
+            </p>
+        </div>
+    </footer>
+
+
+</body>
+
+</html>
