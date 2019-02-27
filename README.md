@@ -1,37 +1,22 @@
-## Welcome to GitHub Pages
+# Web Utility Collection
 
-You can use the [editor on GitHub](https://github.com/fakhrulhilal/WebUtility/edit/master/README.md) to maintain and preview the content for your website in Markdown files.
+This repository contains collection of utility for web
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+## [Translator](translator.html)
 
-### Markdown
+It's a wrapper for [google translate](https://translate.google.com) but you can get translation for multiple languages in 1 request. To use this utility, you need to gain [translation API key](https://cloud.google.com/translate/docs/quickstarts).
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+Parameters
 
-```markdown
-Syntax highlighted code block
+Key | Type | Required | Default Value | Description 
+--- | ---- | -------- | ------------- | ------------
+`defaultLanguage` | language code | no | 'en' | Default language for source, also for getting supported languages list
+`apiKey` | string | yes | empty | Google translate API key
+`selectedLanguages` | array of language code | no | empty | Comma separated value of language code. It's used as pre-selected target language.
 
-# Header 1
-## Header 2
-### Header 3
+Language code uses [ISO-639-1 Code](https://cloud.google.com/translate/docs/languages).
 
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
-```
-
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/fakhrulhilal/WebUtility/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+Examples:
+- simple example: [translator.html?apiKey=YOU_API_KEY](translator.html?apiKey=YOU_API_KEY)
+- use english as default source: [translator.html?apiKey=YOU_API_KEY&defaultLanguage=en](translator.html?apiKey=YOU_API_KEY&defaultLanguage=en)
+- use english as default source, pre select Russian and Japanese as target languages: [translator.html?apiKey=YOU_API_KEY&defaultLanguage=en&selectedLanguages=ru,ja](translator.html?apiKey=YOU_API_KEY&defaultLanguage=en&selectedLanguages=ru,ja)
